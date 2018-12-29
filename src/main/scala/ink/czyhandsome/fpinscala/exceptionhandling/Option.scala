@@ -11,7 +11,7 @@ sealed trait Option[+A] {
     case None => None
   }
 
-  def getOrElse[B >: A](default: => B): B = {
+  def getOrElse[B >: A](default: => B): B = this match {
     case Some(a) => a
     case None => default
   }
@@ -66,5 +66,5 @@ object Option {
     a.foldRight[Option[List[B]]](Some(Nil)) { (x, y) => map2(f(x), y) { _ :: _ } }
 
   def sequence_via_traverse[A](a: List[Option[A]]): Option[List[A]] =
-    sequence(a) { _ }
+    traverse(a) { x => x }
 }

@@ -32,4 +32,10 @@ object Either {
       aa <- a
       bb <- b
     } yield f(aa, bb)
+
+  def traverse[E, A, B](a: List[A])(f: A => Either[E, B]): Either[E, List[B]] =
+    a.foldRight[Either[E, List[B]]](Right(Nil)) { (x, ex) => map2(f(x), ex) { _ :: _ } }
+
+  def sequence[E, A](a: List[Either[E, A]]): Either[E, List[A]] =
+    traverse(a) { x => x }
 }
