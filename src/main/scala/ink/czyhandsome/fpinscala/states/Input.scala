@@ -30,4 +30,10 @@ object Machine {
     _ <- sequence(inputs map { ip => modify(update(ip)) })
     s <- get
   } yield (s.coins, s.candies)
+
+  def main(args: Array[String]): Unit = {
+    val m = Machine(locked = false, 10, 0)
+    val s = simulateMachine(List(Coin, Turn, Turn, Coin))
+    println(s.run(m))
+  }
 }

@@ -105,7 +105,7 @@ object RNG {
   def map_viaFlatMap[A, B](f: Rand[A])(g: A => B): Rand[B] =
     flatMap(f) { a => unit(g(a)) }
 
-  def map2[A, B, C](a: Rand[A], b: Rand[B])(f: (A, B) => C): Rand[C] =
+  def map2_viaFlatMap[A, B, C](a: Rand[A], b: Rand[B])(f: (A, B) => C): Rand[C] =
     flatMap(a) { aa =>
       flatMap(b) { bb =>
         unit(f(aa, bb))

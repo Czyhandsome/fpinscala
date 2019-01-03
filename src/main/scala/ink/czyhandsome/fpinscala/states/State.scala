@@ -18,10 +18,6 @@ case class State[S, +A](run: S => (A, S)) {
     }
 }
 
-trait RNG {
-  type Rand[A] = State[RNG, A]
-}
-
 object State {
   def unit[S, A](a: A): State[S, A] = State((a, _))
 
