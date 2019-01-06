@@ -8,11 +8,11 @@ import java.util.concurrent.ExecutorService
   * @author 曹子钰, 2019-01-05
   */
 object P {
-  def proc(es: ExecutorService)(f: => Unit): Unit = {
+  def proc(es: ExecutorService)(f: ExecutorService => Unit): Unit = {
     try {
       f
     } finally {
-      es.shutdownNow()
+      es.shutdown()
     }
   }
 }

@@ -17,7 +17,7 @@ object Practices {
   def deadLock(): Unit = {
     val a = lazyUnit(42 + 1)
     val S = Executors.newFixedThreadPool(4)
-    P.proc(S) {
+    P.proc(S) { _ =>
       println(equal(S)(a, fork(a)))
     }
   }
