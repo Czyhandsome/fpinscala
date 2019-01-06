@@ -14,6 +14,8 @@ object Par {
     def map[B](f: A => B): Par[B] = Par.map(p)(f)
 
     def map2[B, C](b: Par[B])(f: (A, B) => C): Par[C] = Par.map2(p, b) { f }
+
+    def flatMap[B](f: A => Par[B]): Par[B] = Par.flatMap(p) { f }
   }
 
   type Par[A] = ExecutorService => Future[A]
@@ -56,6 +58,27 @@ object Par {
   }
 
   def equal[A](e: ExecutorService)(p1: Par[A], p2: Par[A]): Boolean = p1(e).get == p2(e).get
+
+  def choice[A](cond: Par[Boolean])(t: Par[A], f: Par[A]): Par[A] =
+    flatMap(cond) { if (_) t else f }
+
+  def choiceN[A](n: Par[Int])(choices: List[Par[A]]): Par[A] =
+    flatMap(n) { choices(_) }
+
+  def choiceMap[K, A](key: Par[K])(choices: Map[K, Par[A]]): Par[A] =
+    flatMap(key) { choices(_) }
+
+  def flatMap[A, B](pa: Par[A])(choices: A => Par[B]): Par[B] =
+    join(pa map { choices })
+
+  def join[A](a: Par[Par[A]]): Par[A] =
+    es => a(es).get()(es)
+
+  def map2_viaFlatMapUnit[A, B, C](a: Par[A], b: Par[B])(f: (A, B) => C): Par[C] =
+    for {
+      aa <- a
+      bb <- b
+    } yield f(aa, bb)
 
   private case class UnitFuture[A](get: A) extends Future[A] {
     override def cancel(mayInterruptIfRunning: Boolean): Boolean = false
