@@ -1,6 +1,5 @@
 package ink.czyhandsome.fpinscala.scalatest
 
-import ink.czyhandsome.fpinscala.laziness.Stream
 import ink.czyhandsome.fpinscala.states.{RNG, State}
 
 /**
@@ -8,7 +7,7 @@ import ink.czyhandsome.fpinscala.states.{RNG, State}
   *
   * @author 曹子钰, 2019-01-06
   */
-case class Gen[A](sample: State[RNG, A]) {
+case class Gen[+A](sample: State[RNG, A]) {
   def map[B](f: A => B): Gen[B] =
     Gen(sample map { f })
 
@@ -17,6 +16,13 @@ case class Gen[A](sample: State[RNG, A]) {
 
   def listOfN(i: Gen[Int]): Gen[List[A]] =
     i.flatMap(ii => Gen.listOfN(ii, this))
+
+  def unsized: SGen[A] = SGen { _ => this }
+
+  def **[B](g2: Gen[B]): Gen[(A, B)] = for {
+    a1 <- this
+    a2 <- g2
+  } yield (a1, a2)
 }
 
 object Gen {
@@ -46,29 +52,4 @@ object Gen {
       if (it > w1 / (w1 + w2)) gg1 else gg2
     }
   }
-
-  def forAll[A](g: Gen[A])(f: A => Boolean): Prop = Prop {
-    (n, rng) =>
-      randomStream(g)(rng)
-        .zip(Stream.from(0))
-        .take(n)
-        .map {
-          case (a, i) => try {
-            if (f(a)) Passed else Falsified(a.toString, i)
-          } catch { case e: Exception => Falsified(buildMsg(a, e), i) }
-        }
-        .find(_.isFalsified)
-        .getOrElse(Passed)
-  }
-
-  private def randomStream[A](g: Gen[A])(rng: RNG): Stream[A] =
-    Stream.unfold(rng) { rng => Some(g.sample.run(rng)) }
-
-  private def buildMsg[A](a: A, e: Exception): String =
-    s"""test case: $a
-       generated an exception: ${ e.getMessage }
-       stack trace:
-       ${ e.getStackTrace.mkString("\n") }
-     """
-      .stripMargin
 }
