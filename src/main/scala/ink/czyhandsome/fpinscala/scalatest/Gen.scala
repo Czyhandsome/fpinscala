@@ -1,5 +1,6 @@
 package ink.czyhandsome.fpinscala.scalatest
 
+import ink.czyhandsome.fpinscala.laziness.Stream
 import ink.czyhandsome.fpinscala.states.{RNG, State}
 
 /**
@@ -46,5 +47,28 @@ object Gen {
     }
   }
 
-  def forAll[A](a: Gen[A])(f: A => Boolean): Prop = ???
+  def forAll[A](g: Gen[A])(f: A => Boolean): Prop = Prop {
+    (n, rng) =>
+      randomStream(g)(rng)
+        .zip(Stream.from(0))
+        .take(n)
+        .map {
+          case (a, i) => try {
+            if (f(a)) Passed else Falsified(a.toString, i)
+          } catch { case e: Exception => Falsified(buildMsg(a, e), i) }
+        }
+        .find(_.isFalsified)
+        .getOrElse(Passed)
+  }
+
+  private def randomStream[A](g: Gen[A])(rng: RNG): Stream[A] =
+    Stream.unfold(rng) { rng => Some(g.sample.run(rng)) }
+
+  private def buildMsg[A](a: A, e: Exception): String =
+    s"""test case: $a
+       generated an exception: ${ e.getMessage }
+       stack trace:
+       ${ e.getStackTrace.mkString("\n") }
+     """
+      .stripMargin
 }

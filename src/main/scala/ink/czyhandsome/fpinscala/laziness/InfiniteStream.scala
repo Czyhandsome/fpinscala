@@ -1,6 +1,6 @@
 package ink.czyhandsome.fpinscala.laziness
 
-import ink.czyhandsome.fpinscala.laziness.Stream.cons
+import ink.czyhandsome.fpinscala.laziness.Stream.{cons, unfold}
 
 /**
   * 无限流
@@ -8,18 +8,6 @@ import ink.czyhandsome.fpinscala.laziness.Stream.cons
   * @author 曹子钰, 2019-01-01
   */
 object InfiniteStream {
-  def ones(): Stream[Int] = unfold(1) { _ => Some(1, 1) }
-
-  def constants[A](a: A): Stream[A] = unfold(a) { _ => Some(a, a) }
-
-  def from(n: Int): Stream[Int] = unfold(n) { s => Some(s, s + 1) }
-
-  def fibs(): Stream[Int] = unfold((0, 1)) { case (a, b) => Some(a, (b, a + b)) }
-
-  def unfold[A, S](z: S)(f: S => Option[(A, S)]): Stream[A] = f(z) match {
-    case Some((aa, ss)) => cons(aa, unfold(ss)(f))
-    case _ => Empty
-  }
 
   def map_ViaUnfold[A, B](s: Stream[A])(f: A => B): Stream[B] =
     unfold(s) {

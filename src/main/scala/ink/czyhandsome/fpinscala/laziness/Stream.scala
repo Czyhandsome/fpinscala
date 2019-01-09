@@ -87,6 +87,21 @@ sealed trait Stream[+A] {
 
   def flatMap[B](p: A => Stream[B]): Stream[B] =
     this.foldRight(Empty: Stream[B]) { (a, s) => p(a) append s }
+
+  def zipWith[B, C](bs: Stream[B])(f: (A, B) => C): Stream[C] =
+    Stream.unfold((this, bs)) {
+      case (Cons(h1, t1), Cons(h2, t2)) => Some((f(h1(), h2()), (t1(), t2())))
+      case _ => None
+    }
+
+  def zip[B](bs: Stream[B]): Stream[(A, B)] =
+    zipWith(bs) { (_, _) }
+
+  @tailrec
+  final def find(f: A => Boolean): Option[A] = this match {
+    case Cons(h, t) => if (f(h())) Some(h()) else t().find { f }
+    case Empty => None
+  }
 }
 
 case object Empty extends Stream[Nothing]
@@ -104,6 +119,19 @@ object Stream {
 
   def apply[A](as: A*): Stream[A] =
     if (as.isEmpty) Empty else cons(as.head, apply(as.tail: _*))
+
+  def ones(): Stream[Int] = unfold(1) { _ => Some(1, 1) }
+
+  def constants[A](a: A): Stream[A] = unfold(a) { _ => Some(a, a) }
+
+  def from(n: Int): Stream[Int] = unfold(n) { s => Some(s, s + 1) }
+
+  def fibs(): Stream[Int] = unfold((0, 1)) { case (a, b) => Some(a, (b, a + b)) }
+
+  def unfold[A, S](z: S)(f: S => Option[(A, S)]): Stream[A] = f(z) match {
+    case Some((aa, ss)) => cons(aa, unfold(ss)(f))
+    case _ => Empty
+  }
 
   def main(args: Array[String]): Unit = {
     val s = Stream(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
