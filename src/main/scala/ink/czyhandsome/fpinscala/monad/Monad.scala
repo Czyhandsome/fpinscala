@@ -50,6 +50,14 @@ trait Monad[F[_]] {
         else map(filterM2(t) { f }) { h :: _ }
       }
     }
+
+  // ********** 练习11.7 ********** //
+  def compose[A, B, C](f: A => F[B], g: B => F[C]): A => F[C] =
+    a => flatMap(f(a)) { g }
+
+  // ********** 练习11.8 ********** //
+  private def flatMap_viaComposeUnit[A, B](m: F[A])(f: A => F[B]): F[B] =
+    compose((_: Unit) => m, f)(())
 }
 
 object Monad {
