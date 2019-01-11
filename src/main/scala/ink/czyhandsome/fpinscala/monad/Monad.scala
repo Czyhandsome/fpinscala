@@ -2,47 +2,49 @@ package ink.czyhandsome.fpinscala.monad
 
 import ink.czyhandsome.fpinscala.laziness.Stream
 
+import scala.language.higherKinds
+
 /**
   * $DESC
   *
   * @author 曹子钰, 2019-01-11
   */
-trait Monad[F[_]] {
+trait Monad[M[_]] extends Functor[M] {
   // ********** primitives ********** //
-  def flatMap[A, B](a: F[A])(f: A => F[B]): F[B]
+  def flatMap[A, B](a: M[A])(f: A => M[B]): M[B]
 
-  def unit[A](a: => A): F[A]
+  def unit[A](a: => A): M[A]
 
   // ********** methods ********** //
   // ********** Non ********** //
-  def map[A, B](a: F[A])(f: A => B): F[B] = flatMap(a) { a => unit(f(a)) }
+  def map[A, B](a: M[A])(f: A => B): M[B] = flatMap(a) { a => unit(f(a)) }
 
-  def map2[A, B, C](fa: F[A], fb: F[B])(f: (A, B) => C): F[C] =
+  def map2[A, B, C](fa: M[A], fb: M[B])(f: (A, B) => C): M[C] =
     flatMap(fa) { a => map(fb) { b => f(a, b) } }
 
   // ********** 练习11.3 ********** //
-  def sequence[A](lma: List[F[A]]): F[List[A]] =
+  def sequence[A](lma: List[M[A]]): M[List[A]] =
     lma.foldRight(unit(List[A]())) { (fa, acc) => map2(fa, acc) { _ :: _ } }
 
-  def traverse[A, B](la: List[A])(f: A => F[B]): F[List[B]] =
+  def traverse[A, B](la: List[A])(f: A => M[B]): M[List[B]] =
   // sequence(la.map { f })
     la.foldRight(unit(List[B]())) { (a, lb) => map2(f(a), lb) { _ :: _ } }
 
   // ********** 练习11.4 ********** //
-  def replicateM[A](n: Int, ma: F[A]): F[List[A]] = sequence(List.fill(n)(ma))
+  def replicateM[A](n: Int, ma: M[A]): M[List[A]] = sequence(List.fill(n)(ma))
 
   // ********** Non ********** //
-  def product[A, B](ma: F[A], mb: F[B]): F[(A, B)] = map2(ma, mb) { (_, _) }
+  def product[A, B](ma: M[A], mb: M[B]): M[(A, B)] = map2(ma, mb) { (_, _) }
 
   // ********** 练习11.6 ********** //
-  def filterM[A](ms: List[A])(f: A => F[Boolean]): F[List[A]] = {
-    val ff: F[List[Option[A]]] = traverse(ms) {
+  def filterM[A](ms: List[A])(f: A => M[Boolean]): M[List[A]] = {
+    val ff: M[List[Option[A]]] = traverse(ms) {
       a => map2(unit(a), f(a)) { (aa, b) => if (b) Some(aa) else None }
     }
     map(ff) { _.filter(_.isDefined).map { case Some(a) => a } }
   }
 
-  def filterM2[A](ms: List[A])(f: A => F[Boolean]): F[List[A]] =
+  def filterM2[A](ms: List[A])(f: A => M[Boolean]): M[List[A]] =
     ms match {
       case Nil => unit(Nil)
       case h :: t => flatMap(f(h)) { b =>
@@ -52,11 +54,11 @@ trait Monad[F[_]] {
     }
 
   // ********** 练习11.7 ********** //
-  def compose[A, B, C](f: A => F[B], g: B => F[C]): A => F[C] =
+  def compose[A, B, C](f: A => M[B], g: B => M[C]): A => M[C] =
     a => flatMap(f(a)) { g }
 
   // ********** 练习11.8 ********** //
-  private def flatMap_viaComposeUnit[A, B](m: F[A])(f: A => F[B]): F[B] =
+  private def flatMap_viaComposeUnit[A, B](m: M[A])(f: A => M[B]): M[B] =
     compose((_: Unit) => m, f)(())
 }
 
