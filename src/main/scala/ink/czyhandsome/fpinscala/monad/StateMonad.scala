@@ -1,5 +1,7 @@
 package ink.czyhandsome.fpinscala.monad
 
+import ink.czyhandsome.fpinscala.monad.State.{getState, setState}
+
 import scala.language.reflectiveCalls
 
 /**
@@ -13,10 +15,6 @@ object StateMonad {
 
     override def unit[A](a: => A): State[S, A] = State.unit(a)
   }
-
-  def getState[SS]: State[SS, SS] = State { s => (s, s) }
-
-  def setState[SS](s: SS): State[SS, Unit] = State { _ => ((), s) }
 
   def zipWithIndex[A](as: List[A]): List[(Int, A)] =
     as.foldLeft(stateMonad[Int].unit(List[(Int, A)]())) { (acc, a) =>
@@ -51,4 +49,8 @@ case class State[S, A](run: S => (A, S)) {
 
 object State {
   def unit[S, A](a: => A): State[S, A] = State { (a, _) }
+
+  def getState[S]: State[S, S] = State { s => (s, s) }
+
+  def setState[S](s: S): State[S, Unit] = State { _ => (s, s) }
 }
