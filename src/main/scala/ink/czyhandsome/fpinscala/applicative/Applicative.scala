@@ -46,6 +46,18 @@ trait Applicative[F[_]] extends Functor[F] {
       override def map2[A, B, C](fa: (F[A], G[A]), fb: (F[B], G[B]))(f: (A, B) => C): (F[C], G[C]) =
         (Applicative.this.map2(fa._1, fb._1) { f }, G.map2(fa._2, fb._2) { f })
     }
+
+  // ********** 练习12.12 ********** //
+  def sequenceMap[K, V](m: Map[K, F[V]]): F[Map[K, V]] = {
+    map(traverse(m.toList) { m => product(unit(m._1), m._2) }) {
+      m => m.map { it => it._1 -> it._2 }.toMap
+    }
+  }
+
+  def sequenceMap2[K, V](m: Map[K, F[V]]): F[Map[K, V]] =
+    m.foldLeft(unit(Map.empty[K, V])) { case (acc, (k, f)) =>
+      map2(acc, f) { (m, v) => m + (k -> v) }
+    }
 }
 
 case class Id[A](value: A)
@@ -59,10 +71,8 @@ object Applicative {
         (fa, fb) match { case (Id(a), Id(b)) => Id(f(a, b)) }
     }
 
-    val f: Id[Int] => Id[Int] = A.apply(A.unit { (_: Int) * 2 })
-    println(f(Id(5)))
-
-    val r = A.map4(Id(1), Id(2), Id(3), Id(4)) { (a, b, c, d) => (a + b) * (c + d) }
-    println(r)
+    val m = Map((1, Id(2)), (3, Id(3)))
+    println(A.sequenceMap(m))
+    println(A.sequenceMap2(m))
   }
 }
