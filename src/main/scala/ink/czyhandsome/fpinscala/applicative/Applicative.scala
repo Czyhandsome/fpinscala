@@ -2,7 +2,7 @@ package ink.czyhandsome.fpinscala.applicative
 
 import ink.czyhandsome.fpinscala.monad.Functor
 
-import scala.language.higherKinds
+import scala.language.{higherKinds, reflectiveCalls}
 
 /**
   * $DESC
