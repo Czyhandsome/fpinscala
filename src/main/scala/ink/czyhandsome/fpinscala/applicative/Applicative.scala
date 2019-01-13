@@ -37,6 +37,15 @@ trait Applicative[F[_]] extends Functor[F] {
 
   def map4[A, B, C, D, E](fa: F[A], fb: F[B], fc: F[C], fd: F[D])(f: (A, B, C, D) => E): F[E] =
     apply(apply(apply(apply(unit(f.curried))(fa))(fb))(fc))(fd)
+
+  // ********** 练习12.8 ********** //
+  def product[G[_]](G: Applicative[G]): Applicative[({type f[x] = (F[x], G[x])})#f] =
+    new Applicative[({type f[x] = (F[x], G[x])})#f] {
+      override def unit[A](a: => A): (F[A], G[A]) = (Applicative.this.unit(a), G.unit(a))
+
+      override def map2[A, B, C](fa: (F[A], G[A]), fb: (F[B], G[B]))(f: (A, B) => C): (F[C], G[C]) =
+        (Applicative.this.map2(fa._1, fb._1) { f }, G.map2(fa._2, fb._2) { f })
+    }
 }
 
 case class Id[A](value: A)
