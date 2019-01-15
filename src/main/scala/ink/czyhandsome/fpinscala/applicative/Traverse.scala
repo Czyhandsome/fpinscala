@@ -1,6 +1,8 @@
 package ink.czyhandsome.fpinscala.applicative
 
 import ink.czyhandsome.fpinscala.monad.Functor
+import ink.czyhandsome.fpinscala.monoid.Monoid
+import ink.czyhandsome.fpinscala.monoid.Monoid.endoMonoid
 
 import scala.language.{higherKinds, implicitConversions, reflectiveCalls}
 
@@ -9,9 +11,7 @@ import scala.language.{higherKinds, implicitConversions, reflectiveCalls}
   *
   * @author 曹子钰, 2019-01-13
   */
-trait Traverse[F[_]] extends Functor[F] {
-  type Const[A, B] = A
-
+trait Traverse[F[_]] extends Functor[F] with Foldable[F] {
   def traverse[G[_] : Applicative, A, B](fa: F[A])(f: A => G[B]): G[F[B]]
 
   //  = sequence(map(fa) { f })
@@ -28,6 +28,21 @@ trait Traverse[F[_]] extends Functor[F] {
   }
 
   override def map[A, B](fa: F[A])(f: A => B): F[B] = traverse[Id, A, B](fa)(f)(idApp)
+
+  // ********** Foldable ********** //
+  type Const[M, B] = M
+
+  implicit def monoidApp[M](M: Monoid[M]): Applicative[({
+    type f[x] = Traverse.this.Const[M, x]
+  })#f] = new Applicative[({type f[x] = Const[M, x]})#f] {
+    override def unit[A](a: => A): Const[M, A] = M.zero
+
+    override def map2[A, B, C](fa: Const[M, A], fb: Const[M, B])(f: (A, B) => C): Const[M, C] =
+      M.op(fa, fb)
+  }
+
+  override def foldMap[A, B](as: F[A])(f: A => B)(mb: Monoid[B]): B =
+    traverse[({type f[x] = Const[B, x]})#f, A, Nothing](as)(f)(monoidApp(mb))
 }
 
 object Traverse {
@@ -47,13 +62,19 @@ object Traverse {
 
   def main(args: Array[String]): Unit = {
     import IdApp.{Id => ID}
-    val G = listApp
     val T = new Traverse[ID] {
       override def traverse[G[_], A, B](fa: ID[A])(f: A => G[B])(implicit g: Applicative[G]): G[ID[B]] =
         g.map(f(fa.value)) { ID(_) }
     }
-    val r = T.sequence(ID(List(1, 2, 3)))(G)
+    implicit val G: Applicative[List] = listApp
+    implicit val M: Monoid[Int] = new Monoid[Int] {
+      override def op(x: Int, y: Int): Int = x + y
+
+      override def zero: Int = 0
+    }
+    val r = T.sequence(ID(List(1, 2, 3)))
     println(r)
     println(T.map(ID(1)) { "Hello " + _ })
+    println(T.foldMap(ID(2)) { _ * 2 }(M))
   }
 }
