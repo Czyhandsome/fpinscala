@@ -59,20 +59,3 @@ trait Applicative[F[_]] extends Functor[F] {
       map2(acc, f) { (m, v) => m + (k -> v) }
     }
 }
-
-case class Id[A](value: A)
-
-object Applicative {
-  def main(args: Array[String]): Unit = {
-    val A = new Applicative[Id] {
-      override def unit[A](a: => A): Id[A] = Id(a)
-
-      override def map2[A, B, C](fa: Id[A], fb: Id[B])(f: (A, B) => C): Id[C] =
-        (fa, fb) match { case (Id(a), Id(b)) => Id(f(a, b)) }
-    }
-
-    val m = Map((1, Id(2)), (3, Id(3)))
-    println(A.sequenceMap(m))
-    println(A.sequenceMap2(m))
-  }
-}
