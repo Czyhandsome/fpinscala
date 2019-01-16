@@ -70,6 +70,30 @@ trait Traverse[F[_]] extends Functor[F] with Foldable[F] {
   // ********** 练习12.17 ********** //
   override def foldLeft[A, B](as: F[A])(z: B)(f: (B, A) => B): B =
     mapAccum(as, z) { (a, b) => ((), f(b, a)) }._2
+
+  // ********** 组合 ********** //
+  def zip[A, B](fa: F[A], fb: F[B]): F[(A, B)] =
+    mapAccum(fa, toList(fb)) {
+      case (_, Nil) => sys.error("zip: Incompatible shape!")
+      case (a, b :: bs) => ((a, b), bs)
+    }._1
+
+  def zipL[A, B](fa: F[A], fb: F[B]): F[(A, Option[B])] =
+    mapAccum(fa, toList(fb)) {
+      case (a, Nil) => ((a, None), Nil)
+      case (a, b :: bs) => ((a, Some(b)), bs)
+    }._1
+
+  def zipR[A, B](fa: F[A], fb: F[B]): F[(Option[A], B)] =
+    mapAccum(fb, toList(fa)) {
+      case (b, Nil) => ((None, b), Nil)
+      case (b, a :: as) => ((Some(a), b), as)
+    }._1
+
+  // ********** 融合 ********** //
+  def fuse[G[_], H[_], A, B](fa: F[A])(f: A => G[B], g: A => H[B])
+                            (implicit G: Applicative[G], H: Applicative[H]): (G[F[B]], H[F[B]]) =
+    traverse[({type f[x] = (G[x], H[x])})#f, A, B](fa)(a => (f(a), g(a)))(G product H)
 }
 
 object Traverse {
