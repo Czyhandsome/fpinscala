@@ -3,6 +3,7 @@ package ink.czyhandsome.fpinscala.applicative
 import ink.czyhandsome.fpinscala.monad.{Functor, StateMonad}
 import ink.czyhandsome.fpinscala.monoid.Monoid
 import ink.czyhandsome.fpinscala.states.State
+import ink.czyhandsome.fpinscala.states.State.{get, set}
 
 import scala.language.{higherKinds, implicitConversions, reflectiveCalls}
 
@@ -48,19 +49,33 @@ trait Traverse[F[_]] extends Functor[F] with Foldable[F] {
   def traverseS[S, A, B](fa: F[A])(f: A => State[S, B]): State[S, F[B]] =
     traverse[({type f[x] = State[S, x]})#f, A, B](fa)(f)(StateMonad.stateMonad[S])
 
-  def zipWithIndex[A](ta: F[A]): F[(A, Int)] =
-    traverseS(ta) { a: A =>
+  def mapAccum[S, A, B](fa: F[A], s: S)(f: (A, S) => (B, S)): (F[B], S) =
+    traverseS(fa) { a: A =>
       for {
-        i <- State.get[Int]
-        _ <- State.set(i + 1)
-      } yield (a, i)
-    }.run(0)._1
+        s1 <- get[S]
+        (b, s2) = f(a, s1)
+        _ <- set(s2)
+      } yield b
+    }.run(s)
+
+  override def toList[A](fa: F[A]): List[A] =
+    mapAccum(fa, List[A]()) { (a, s) => ((), a :: s) }._2.reverse
+
+  def zipWithIndex[A](fa: F[A]): F[(A, Int)] =
+    mapAccum(fa, 0) { (a, s) => ((a, s), s + 1) }._1
+
+  // ********** 练习12.16 ********** //
+  def reverse[A](fa: F[A]): F[A] = mapAccum(fa, toList(fa).reverse) { (_, as) => (as.head, as.tail) }._1
+
+  // ********** 练习12.17 ********** //
+  override def foldLeft[A, B](as: F[A])(z: B)(f: (B, A) => B): B =
+    mapAccum(as, z) { (a, b) => ((), f(b, a)) }._2
 }
 
 object Traverse {
   def listTraverse: Traverse[List] = new Traverse[List] {
     override def traverse[G[_], A, B](fa: List[A])(f: A => G[B])(implicit G: Applicative[G]): G[List[B]] =
-      fa.foldLeft(G.unit(List[B]())) { (acc, a) => G.map2(f(a), acc) { _ :: _ } }
+      fa.foldRight(G.unit(List[B]())) { (a, acc) => G.map2(f(a), acc) { _ :: _ } }
   }
 
   def listApp: Applicative[List] = new Applicative[List] {
@@ -73,7 +88,7 @@ object Traverse {
   }
 
   def main(args: Array[String]): Unit = {
-    myZip()
+    myFoldLeft()
   }
 
   import IdApp.{Id => ID}
@@ -99,5 +114,12 @@ object Traverse {
   def myZip(): Unit = {
     val x = T.traverseS(ID(3)) { a => State[Int, Int] { s => (a, s + 2) } }
     println(x.run(0))
+  }
+
+  def myFoldLeft(): Unit = {
+    val l = List(1, 2, 3, 4, 5)
+    val lt = listTraverse
+    val z = lt.foldLeft(l)("Hello ") { _ + _ }
+    println(z)
   }
 }
