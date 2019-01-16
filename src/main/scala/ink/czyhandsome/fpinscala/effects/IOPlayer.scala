@@ -1,5 +1,6 @@
 package ink.czyhandsome.fpinscala.effects
 
+import ink.czyhandsome.fpinscala.effects.IO.PrintLine
 import ink.czyhandsome.fpinscala.effects.Player.{winner, winnerMsg}
 
 /**
@@ -15,3 +16,4 @@ object IOPlayer {
     io.run()
   }
 }
+
