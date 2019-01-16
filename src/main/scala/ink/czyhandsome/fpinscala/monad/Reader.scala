@@ -1,6 +1,7 @@
 package ink.czyhandsome.fpinscala.monad
 
-import ink.czyhandsome.fpinscala.monad.State.{getState, setState}
+import ink.czyhandsome.fpinscala.states.State
+import ink.czyhandsome.fpinscala.states.State.{get, set}
 
 import scala.language.reflectiveCalls
 
@@ -28,8 +29,8 @@ object Reader {
     val ls: List[State[Int, (String, Int)]] = List.range(0, 6).map { _ =>
       for {
         i <- s
-        n <- getState
-        _ <- setState(n * 2)
+        n <- get
+        _ <- set(n * 2)
       } yield (i, n)
     }
     val r = StateMonad.stateMonad[Int].sequence(ls).run(1)

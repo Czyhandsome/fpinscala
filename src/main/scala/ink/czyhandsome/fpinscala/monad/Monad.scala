@@ -1,5 +1,6 @@
 package ink.czyhandsome.fpinscala.monad
 
+import ink.czyhandsome.fpinscala.applicative.Applicative
 import ink.czyhandsome.fpinscala.laziness.Stream
 
 import scala.language.higherKinds
@@ -9,7 +10,7 @@ import scala.language.higherKinds
   *
   * @author 曹子钰, 2019-01-11
   */
-trait Monad[M[_]] extends Functor[M] {
+trait Monad[M[_]] extends Applicative[M] {
   // ********** primitives ********** //
   def flatMap[A, B](a: M[A])(f: A => M[B]): M[B]
 
@@ -17,24 +18,24 @@ trait Monad[M[_]] extends Functor[M] {
 
   // ********** methods ********** //
   // ********** Non ********** //
-  def map[A, B](a: M[A])(f: A => B): M[B] = flatMap(a) { a => unit(f(a)) }
+  override def map[A, B](a: M[A])(f: A => B): M[B] = flatMap(a) { a => unit(f(a)) }
 
   def map2[A, B, C](fa: M[A], fb: M[B])(f: (A, B) => C): M[C] =
     flatMap(fa) { a => map(fb) { b => f(a, b) } }
 
   // ********** 练习11.3 ********** //
-  def sequence[A](lma: List[M[A]]): M[List[A]] =
+  override def sequence[A](lma: List[M[A]]): M[List[A]] =
     lma.foldRight(unit(List[A]())) { (fa, acc) => map2(fa, acc) { _ :: _ } }
 
-  def traverse[A, B](la: List[A])(f: A => M[B]): M[List[B]] =
+  override def traverse[A, B](la: List[A])(f: A => M[B]): M[List[B]] =
   // sequence(la.map { f })
     la.foldRight(unit(List[B]())) { (a, lb) => map2(f(a), lb) { _ :: _ } }
 
   // ********** 练习11.4 ********** //
-  def replicateM[A](n: Int, ma: M[A]): M[List[A]] = sequence(List.fill(n)(ma))
+  override def replicateM[A](n: Int, ma: M[A]): M[List[A]] = sequence(List.fill(n)(ma))
 
   // ********** Non ********** //
-  def product[A, B](ma: M[A], mb: M[B]): M[(A, B)] = map2(ma, mb) { (_, _) }
+  override def product[A, B](ma: M[A], mb: M[B]): M[(A, B)] = map2(ma, mb) { (_, _) }
 
   // ********** 练习11.6 ********** //
   def filterM[A](ms: List[A])(f: A => M[Boolean]): M[List[A]] = {

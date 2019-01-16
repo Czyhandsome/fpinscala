@@ -1,8 +1,8 @@
 package ink.czyhandsome.fpinscala.applicative
 
-import ink.czyhandsome.fpinscala.monad.Functor
+import ink.czyhandsome.fpinscala.monad.{Functor, StateMonad}
 import ink.czyhandsome.fpinscala.monoid.Monoid
-import ink.czyhandsome.fpinscala.monoid.Monoid.endoMonoid
+import ink.czyhandsome.fpinscala.states.State
 
 import scala.language.{higherKinds, implicitConversions, reflectiveCalls}
 
@@ -12,11 +12,11 @@ import scala.language.{higherKinds, implicitConversions, reflectiveCalls}
   * @author 曹子钰, 2019-01-13
   */
 trait Traverse[F[_]] extends Functor[F] with Foldable[F] {
-  def traverse[G[_], A, B](fa: F[A])(f: A => G[B])(implicit G:Applicative[G]): G[F[B]]
+  def traverse[G[_], A, B](fa: F[A])(f: A => G[B])(implicit G: Applicative[G]): G[F[B]]
 
   //  = sequence(map(fa) { f })
 
-  def sequence[G[_], A](fga: F[G[A]])(implicit G:Applicative[G]): G[F[A]] =
+  def sequence[G[_], A](fga: F[G[A]])(implicit G: Applicative[G]): G[F[A]] =
     traverse(fga) { ga => ga }
 
   // ********** 练习12.14 ********** //
@@ -43,6 +43,18 @@ trait Traverse[F[_]] extends Functor[F] with Foldable[F] {
 
   override def foldMap[A, B](as: F[A])(f: A => B)(mb: Monoid[B]): B =
     traverse[({type f[x] = Const[B, x]})#f, A, Nothing](as)(f)(monoidApp(mb))
+
+  // ********** States ********** //
+  def traverseS[S, A, B](fa: F[A])(f: A => State[S, B]): State[S, F[B]] =
+    traverse[({type f[x] = State[S, x]})#f, A, B](fa)(f)(StateMonad.stateMonad[S])
+
+  def zipWithIndex[A](ta: F[A]): F[(A, Int)] =
+    traverseS(ta) { a: A =>
+      for {
+        i <- State.get[Int]
+        _ <- State.set(i + 1)
+      } yield (a, i)
+    }.run(0)._1
 }
 
 object Traverse {
@@ -61,20 +73,31 @@ object Traverse {
   }
 
   def main(args: Array[String]): Unit = {
-    import IdApp.{Id => ID}
-    val T = new Traverse[ID] {
-      override def traverse[G[_], A, B](fa: ID[A])(f: A => G[B])(implicit g: Applicative[G]): G[ID[B]] =
-        g.map(f(fa.value)) { ID(_) }
-    }
-    implicit val G: Applicative[List] = listApp
-    implicit val M: Monoid[Int] = new Monoid[Int] {
-      override def op(x: Int, y: Int): Int = x + y
+    myZip()
+  }
 
-      override def zero: Int = 0
-    }
+  import IdApp.{Id => ID}
+
+  val T: Traverse[ID] = new Traverse[ID] {
+    override def traverse[G[_], A, B](fa: ID[A])(f: A => G[B])(implicit g: Applicative[G]): G[ID[B]] =
+      g.map(f(fa.value)) { ID(_) }
+  }
+  implicit val G: Applicative[List] = listApp
+  implicit val M: Monoid[Int] = new Monoid[Int] {
+    override def op(x: Int, y: Int): Int = x + y
+
+    override def zero: Int = 0
+  }
+
+  def myId(): Unit = {
     val r = T.sequence(ID(List(1, 2, 3)))
     println(r)
     println(T.map(ID(1)) { "Hello " + _ })
     println(T.foldMap(ID(2)) { _ * 2 }(M))
+  }
+
+  def myZip(): Unit = {
+    val x = T.traverseS(ID(3)) { a => State[Int, Int] { s => (a, s + 2) } }
+    println(x.run(0))
   }
 }

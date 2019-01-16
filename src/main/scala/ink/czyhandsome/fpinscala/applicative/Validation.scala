@@ -2,6 +2,8 @@ package ink.czyhandsome.fpinscala.applicative
 
 import java.util.Date
 
+import ink.czyhandsome.fpinscala.monad.Monad
+
 import scala.language.reflectiveCalls
 
 /**

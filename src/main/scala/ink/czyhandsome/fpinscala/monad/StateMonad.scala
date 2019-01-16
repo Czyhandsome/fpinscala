@@ -1,6 +1,7 @@
 package ink.czyhandsome.fpinscala.monad
 
-import ink.czyhandsome.fpinscala.monad.State.{getState, setState}
+import ink.czyhandsome.fpinscala.states.State
+import ink.czyhandsome.fpinscala.states.State.{get, set}
 
 import scala.language.reflectiveCalls
 
@@ -20,8 +21,8 @@ object StateMonad {
     as.foldLeft(stateMonad[Int].unit(List[(Int, A)]())) { (acc, a) =>
       for {
         xs <- acc
-        n <- getState
-        _ <- setState(n + 1)
+        n <- get
+        _ <- set(n + 1)
       } yield (n, a) :: xs
     }.run(0)._1.reverse
 
@@ -29,28 +30,4 @@ object StateMonad {
     val z = zipWithIndex(List(1, 2, 3, 4, 5, 6, 7))
     println(z)
   }
-}
-
-case class State[S, A](run: S => (A, S)) {
-  def flatMap[B](f: A => State[S, B]): State[S, B] = State {
-    s => {
-      val (a, s1) = run(s)
-      f(a).run(s1)
-    }
-  }
-
-  def map[B](f: A => B): State[S, B] = State {
-    s => {
-      val (a, s1) = run(s)
-      (f(a), s1)
-    }
-  }
-}
-
-object State {
-  def unit[S, A](a: => A): State[S, A] = State { (a, _) }
-
-  def getState[S]: State[S, S] = State { s => (s, s) }
-
-  def setState[S](s: S): State[S, Unit] = State { _ => (s, s) }
 }
