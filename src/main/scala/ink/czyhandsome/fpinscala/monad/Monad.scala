@@ -61,6 +61,12 @@ trait Monad[M[_]] extends Applicative[M] {
   // ********** 练习11.8 ********** //
   private def flatMap_viaComposeUnit[A, B](m: M[A])(f: A => M[B]): M[B] =
     compose((_: Unit) => m, f)(())
+
+  // ********** Others ********** //
+  def forever[A, B](a: M[A]): M[B] = {
+    lazy val t: M[B] = flatMap(a) { _ => t }
+    t
+  }
 }
 
 object Monad {
